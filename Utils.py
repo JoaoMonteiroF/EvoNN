@@ -12,11 +12,6 @@ class lossFuncException(Exception):
 
 def buildAndSaveModels(optimizer):
 
-	if not os.path.isdir('Models'):
-		os.makedirs('Models')
-
-	dateTime = datetime.now().strftime('%d-%m-%Y %H:%M')
-
 	k = len(optimizer.bestIndividuals)
 
 	results = [0]*k
@@ -33,7 +28,7 @@ def buildAndSaveModels(optimizer):
 
 		modelToSave = optimizer.model.EVOModel
 
-		modelToSave.save('Models/bestModel-'+str(index+1)+'-'+dateTime+'.hdf5')
+		modelToSave.save('$SCRATCH/Models/bestModel-'+str(index+1)+'-'+dateTime+'.hdf5')
 
 		index+=1
 

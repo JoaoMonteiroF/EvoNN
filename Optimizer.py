@@ -114,6 +114,8 @@ class DEOptimizer(Optimizer):
 
 	def modelFit(self):
 
+		bestFitness=[]
+
 		print('Start of evolution...')
 
 		NDIM = self.totalNumberOfParameters
@@ -179,10 +181,19 @@ class DEOptimizer(Optimizer):
 			hof.update(pop)
 			record = stats.compile(pop)
 			logbook.record(gen=g, evals=len(pop), **record)
+			bestFitness.append(hof[0].fitness.values[0]
 			print(logbook.stream)
+			pickle.dump(bestFitness, open('~/fitness.p', 'wb'))
 
 		print("Best fitness found is:", hof[0].fitness.values[0])
 
 		self.bestIndividuals = hof
 
 		return logbook
+
+class SGDOptimizer(Optimizer):
+	
+	def modelFit(self):
+		history = self.model.EVOModel.fit(self.x_train, self.y_train, batch_size=self.PopulationSize, nb_epoch=self.numberOfEpochs, verbose=0, validation_data=(self.x_valid, self.y_valid))
+		return history
+
