@@ -3,13 +3,14 @@ import scipy.io
 
 from keras.datasets import mnist
 from keras.utils import to_categorical
+from keras import backend as K
 
 import numpy as np
 
 import models_zoo
 from Optimizer import Optimizer, DEOptimizer, NNEVO 
 from Utils import buildAndSaveModels
-from models_zoo import MLP
+from models_zoo import MLP_MNIST
 
 ############# Import data set
 
@@ -26,6 +27,7 @@ else:
 	x_train = x_train.reshape(x_train.shape[0], img_rows, img_cols, 1)
 	x_valid = x_valid.reshape(x_valid.shape[0], img_rows, img_cols, 1)
 	input_shape = (img_rows, img_cols, 1)
+
 
 x_train = x_train.astype('float32')
 x_valid = x_valid.astype('float32')
@@ -46,9 +48,9 @@ def main():
 	numberOfEpochs = 1000
 	popSize = 250
 
-	model = MLP_mnist()
+	model = MLP_MNIST()
 
-	optimizer = DEOptimizer(x_train=x_train['features'], y_train=y_train['gs_dev'], x_valid=x_valid['features'], y_valid=y_valid['gs_dev'], preDefinedModel=model, n_epochs=numberOfEpochs, popSize = popSize, loss = 'mse')
+	optimizer = DEOptimizer(x_train=x_train, y_train=y_train, x_valid=x_valid, y_valid=y_valid, preDefinedModel=model, n_epochs=numberOfEpochs, popSize = popSize, loss = 'mse')
 
 	optimizer.modelFit()
 

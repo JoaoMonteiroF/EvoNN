@@ -8,6 +8,8 @@ from itertools import chain
 
 import random
 import array
+import pickle
+import os.path
 
 from Utils import countParameters, calculateLoss, lossFuncException, tensorElementsCount
 
@@ -134,9 +136,37 @@ class DEOptimizer(Optimizer):
 		toolbox.register("evaluate", self.EVOEvaluate)
 
 		MU = self.PopulationSize
-		NGEN = self.numberOfEpochs    
+		NGEN = self.numberOfEpochs  
 
-		pop = toolbox.population(n=MU);
+		runMax = 300
+		epoch=0
+		run=0
+		found = False
+		CPNamePOP = None
+
+		#Look for checkpoint populations
+
+		for i in range(runMax,-1,-1):
+			for j in range(self.numberOfEpochs,-1,-1):	
+				epochStr = str(j)
+				runStr = str(i)
+
+				if (os.path.exists('CP/pop-'+runStr+'-'+epochStr+'.p')):
+					CPNamePOP = os.path.exists('CP/pop-'+runStr+'-'+epochStr+'.p')
+					epoch=j+1
+					run=i+1
+					found=True
+					break
+			if found:
+				break
+
+		if found:
+			pop = pickle.load(open(CPNamePOP, 'rb'))
+			g=epoch
+		else:
+			pop = toolbox.population(n=MU)
+			g=1
+
 		hof = tools.HallOfFame(10)
 		stats = tools.Statistics(lambda ind: ind.fitness.values)
 		stats.register("avg", np.mean)
@@ -160,7 +190,7 @@ class DEOptimizer(Optimizer):
 		logbook.record(gen=0, evals=len(pop), **record)
 		print(logbook.stream)
 
-		for g in range(1, NGEN):
+		while g<=NGEN:
 			children = []
 			for agent in pop:
 				# We must clone everything to ensure independence
@@ -181,9 +211,11 @@ class DEOptimizer(Optimizer):
 			hof.update(pop)
 			record = stats.compile(pop)
 			logbook.record(gen=g, evals=len(pop), **record)
-			bestFitness.append(hof[0].fitness.values[0]
+			bestFitness.append(hof[0].fitness.values[0])
 			print(logbook.stream)
-			pickle.dump(bestFitness, open('~/fitness.p', 'wb'))
+			pickle.dump(bestFitness, open('fitness.p', 'wb'))
+			pickle.dump(pop, open('CP/pop-'+str(run)+'-'+str(g)+'.p', 'wb'))
+			g+=1
 
 		print("Best fitness found is:", hof[0].fitness.values[0])
 
