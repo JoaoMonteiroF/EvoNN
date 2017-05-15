@@ -2,5 +2,4 @@
 Evolutionary Algorithms Training of Neural Networks
 
 # To do:
-1. Check pointing
-2. To make parallel (SCOOP)
+1. To make parallel (SCOOP)
