@@ -165,7 +165,7 @@ class DEOptimizer(Optimizer):
 			pop = toolbox.population(n=MU)
 			g=1
 
-		if (os.path.exists('fitness.p')):
+		if (os.path.exists('fitness.p') and found):
 			bestFitness=pickle.load(open('fitness.p', 'rb'))
 		else:
 			bestFitness=[]
