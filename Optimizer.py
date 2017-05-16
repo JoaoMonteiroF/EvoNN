@@ -150,7 +150,7 @@ class DEOptimizer(Optimizer):
 				runStr = str(i)
 
 				if (os.path.exists('CP/pop-'+runStr+'-'+epochStr+'.p')):
-					CPNamePOP = os.path.exists('CP/pop-'+runStr+'-'+epochStr+'.p')
+					CPNamePOP = 'CP/pop-'+runStr+'-'+epochStr+'.p'
 					epoch=j+1
 					run=i+1
 					found=True
