@@ -116,8 +116,6 @@ class DEOptimizer(Optimizer):
 
 	def modelFit(self):
 
-		bestFitness=[]
-
 		print('Start of evolution...')
 
 		NDIM = self.totalNumberOfParameters
@@ -162,9 +160,11 @@ class DEOptimizer(Optimizer):
 
 		if found:
 			pop = pickle.load(open(CPNamePOP, 'rb'))
+			bestFitness=pickle.load(open('fitness.p', 'rb'))
 			g=epoch
 		else:
 			pop = toolbox.population(n=MU)
+			bestFitness=[]
 			g=1
 
 		hof = tools.HallOfFame(10)

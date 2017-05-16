@@ -2,6 +2,8 @@ from datetime import datetime
 import time
 import numpy as np
 import os
+import pickle
+import matplotlib.pyplot as plt
 from sklearn.metrics import log_loss, mean_absolute_error, mean_squared_error
 
 class lossFuncException(Exception):
@@ -75,3 +77,12 @@ def calculateLoss(y_true, y_pred, lossFunction):
 			raise Exception(lossFunction)
 	except lossFuncException:
 		print 'Wrong loss function definition. Value passed:', lossFuncException.value
+
+def plot_fitness(pkl = 'fitness.p'):
+	to_plot = pickle.load(file(pkl))
+	plt.plot(to_plot)
+	plt.legend('Fitness')	
+	plt.show()
+
+if __name__ == "__main__":
+	plot_fitness()
