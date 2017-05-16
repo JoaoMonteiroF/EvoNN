@@ -160,12 +160,15 @@ class DEOptimizer(Optimizer):
 
 		if found:
 			pop = pickle.load(open(CPNamePOP, 'rb'))
-			bestFitness=pickle.load(open('fitness.p', 'rb'))
 			g=epoch
 		else:
 			pop = toolbox.population(n=MU)
-			bestFitness=[]
 			g=1
+
+		if (os.path.exists('fitness.p')):
+			bestFitness=pickle.load(open('fitness.p', 'rb'))
+		else:
+			bestFitness=[]
 
 		hof = tools.HallOfFame(10)
 		stats = tools.Statistics(lambda ind: ind.fitness.values)
