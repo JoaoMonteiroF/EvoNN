@@ -72,7 +72,7 @@ class NNEVO(object):
 			
 				except AttributeError:
 					numberOfParameters = len(params)
-					newParameters = np.asarray(parametersCopy[0:numberOfParameters])
+					newParameters = parametersCopy[0:numberOfParameters]
 
 				paramsToUpdate.append(newParameters)
 
