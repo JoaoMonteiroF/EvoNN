@@ -149,8 +149,8 @@ class DEOptimizer(Optimizer):
 				epochStr = str(j)
 				runStr = str(i)
 
-				if (os.path.exists('$SCRATCH/CP/pop-'+runStr+'-'+epochStr+'.p')):
-					CPNamePOP = '$SCRATCH/CP/pop-'+runStr+'-'+epochStr+'.p'
+				if (os.path.exists('/scratch/nwv-632-aa/CP/pop-'+runStr+'-'+epochStr+'.p')):
+					CPNamePOP = '/scratch/nwv-632-aa/CP/pop-'+runStr+'-'+epochStr+'.p'
 					epoch=j+1
 					run=i+1
 					found=True
@@ -217,7 +217,7 @@ class DEOptimizer(Optimizer):
 			bestFitness.append(hof[0].fitness.values[0])
 			print(logbook.stream)
 			pickle.dump(bestFitness, open('fitness.p', 'wb'))
-			pickle.dump(pop, open('$SCRATCH/CP/pop-'+str(run)+'-'+str(g)+'.p', 'wb'))
+			pickle.dump(pop, open('/scratch/nwv-632-aa/CP/pop-'+str(run)+'-'+str(g)+'.p', 'wb'))
 			g+=1
 
 		print("Best fitness found is:", hof[0].fitness.values[0])
