@@ -39,7 +39,7 @@ def buildAndSaveModels(optimizer):
 
 		modelToSave = optimizer.model.EVOModel
 
-		modelToSave.save('$SCRATCH/Models/bestModel-'+str(index+1)+'-'+dateTime+'.hdf5')
+		modelToSave.save('$/scratch/nwv-632-aa/Models/bestModel-'+str(index+1)+'-'+dateTime+'.h5')
 
 		index+=1
 

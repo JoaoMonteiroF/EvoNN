@@ -22,10 +22,9 @@ def main():
 	model = MLP_MNIST()
 
 	optimizer = DEOptimizer(x_train=x_train, y_train=y_train, x_valid=x_valid, y_valid=y_valid, preDefinedModel=model, n_epochs=numberOfEpochs, popSize = popSize, loss = 'cross_entropy')
+	#optimizer = SGDOptimizer(x_train=x_train, y_train=y_train, x_valid=x_valid, y_valid=y_valid, preDefinedModel=model, n_epochs=numberOfEpochs, popSize = popSize, loss = 'cross_entropy')
 
 	optimizer.modelFit()
-
-	buildAndSaveModels(optimizer)
 
 if __name__ == "__main__":
 	main()

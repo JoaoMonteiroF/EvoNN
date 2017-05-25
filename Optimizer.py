@@ -114,7 +114,17 @@ class DEOptimizer(Optimizer):
 			x[i] = y[i]
 			if random.random() < cr:
 			    break
-		return x	
+		return x
+
+	def computeValidationFitness(self, hallOfFame):
+	
+		bestFitness = float('inf')
+
+		for ind in hallOfFame:
+			fitness = self.testModel(ind)
+			if fitness < bestFitness:
+				bestFitness = fitness
+		return fitness
 
 	def modelFit(self):
 
@@ -139,6 +149,7 @@ class DEOptimizer(Optimizer):
 		NGEN = self.numberOfEpochs  
 
 		runMax = 300
+		patience = 100
 		epoch=0
 		run=0
 		found = False
@@ -168,9 +179,11 @@ class DEOptimizer(Optimizer):
 			g=1
 
 		if (os.path.exists('fitness.p') and found):
-			bestFitness=pickle.load(open('fitness.p', 'rb'))
+			bestTrainFitnessHist=pickle.load(open('train_fitness.p', 'rb'))
+			bestValidFitnessHist=pickle.load(open('valid_fitness.p', 'rb'))
 		else:
-			bestFitness=[]
+			bestTrainFitnessHist = []
+			bestValidFitnessHist = []
 
 		hof = tools.HallOfFame(10)
 		stats = tools.Statistics(lambda ind: ind.fitness.values)
@@ -195,7 +208,11 @@ class DEOptimizer(Optimizer):
 		logbook.record(gen=0, evals=len(pop), **record)
 		print(logbook.stream)
 
-		while g<=NGEN:
+		iterationsWithoutImprovement = 0
+		currentBestValidationFitness = 0
+		lastBestValidationFitness = float('inf')
+
+		while (g<=NGEN and iterationsWithoutImprovement <= patience):
 			children = []
 			for agent in pop:
 				# We must clone everything to ensure independence
@@ -216,22 +233,38 @@ class DEOptimizer(Optimizer):
 			hof.update(pop)
 			record = stats.compile(pop)
 			logbook.record(gen=g, evals=len(pop), **record)
-			bestFitness.append(hof[0].fitness.values[0])
-			print(logbook.stream)
-			pickle.dump(bestFitness, open('fitness.p', 'wb'))
+
+			currentBestValidationFitness = self.computeValidationFitness(hof)
+
+			if currentBestValidationFitness < lastBestValidationFitness:
+				iterationsWithoutImprovement = 0
+			else:
+				iterationsWithoutImprovement += 1
+
+			bestTrainFitnessHist.append(hof[0].fitness.values[0])
+			bestValidFitnessHist.append(currentBestValidationFitness)
+
+			pickle.dump(bestTrainFitnessHist, open('train_fitness.p', 'wb'))
+			pickle.dump(bestValidFitnessHist, open('valid_fitness.p', 'wb'))
 			pickle.dump(pop, open('/scratch/nwv-632-aa/CP/pop-'+str(run)+'-'+str(g)+'.p', 'wb'))
+
 			g+=1
+
+			print(logbook.stream)
 
 		print("Best fitness found is:", hof[0].fitness.values[0])
 
 		self.bestIndividuals = hof
-
+		pickle.dump(logbook, open('DEOptimizer_logbook.p', 'wb'))
+		buildAndSaveModels(self)
 		return logbook
 
 class SGDOptimizer(Optimizer):
 	
 	def modelFit(self):
 		earlyStopping = EarlyStopping(monitor='val_loss', patience=30)
-		history = self.model.EVOModel.fit(self.x_train, self.y_train, batch_size=self.PopulationSize, epochs=self.numberOfEpochs, verbose=0, validation_data=(self.x_valid, self.y_valid), callbacks=[earlyStopping])
-		return history
+		hist = self.model.EVOModel.fit(self.x_train, self.y_train, batch_size=self.PopulationSize, epochs=self.numberOfEpochs, verbose=0, validation_data=(self.x_valid, self.y_valid), callbacks=[earlyStopping])
+		self.model.EVOModel.save('SGDTrained.h5')
+		pickle.dump(hist.history, open('SGDOptimizer_history.p', 'wb'))
+		return hist
 
