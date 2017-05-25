@@ -2,6 +2,8 @@ from deap import base
 from deap import creator
 from deap import tools
 
+from keras.callbacks import EarlyStopping
+
 import numpy as np
 
 from itertools import chain
@@ -149,8 +151,8 @@ class DEOptimizer(Optimizer):
 				epochStr = str(j)
 				runStr = str(i)
 
-				if (os.path.exists('/RQexec/joaobmf/CP/pop-'+runStr+'-'+epochStr+'.p')):
-					CPNamePOP = '/RQexec/joaobmf/CP/pop-'+runStr+'-'+epochStr+'.p'
+				if (os.path.exists('/scratch/nwv-632-aa/CP/pop-'+runStr+'-'+epochStr+'.p')):
+					CPNamePOP = '/scratch/nwv-632-aa/CP/pop-'+runStr+'-'+epochStr+'.p'
 					epoch=j+1
 					run=i+1
 					found=True
@@ -217,7 +219,7 @@ class DEOptimizer(Optimizer):
 			bestFitness.append(hof[0].fitness.values[0])
 			print(logbook.stream)
 			pickle.dump(bestFitness, open('fitness.p', 'wb'))
-			pickle.dump(pop, open('/RQexec/joaobmf/CP/pop-'+str(run)+'-'+str(g)+'.p', 'wb'))
+			pickle.dump(pop, open('/scratch/nwv-632-aa/CP/pop-'+str(run)+'-'+str(g)+'.p', 'wb'))
 			g+=1
 
 		print("Best fitness found is:", hof[0].fitness.values[0])
@@ -229,6 +231,7 @@ class DEOptimizer(Optimizer):
 class SGDOptimizer(Optimizer):
 	
 	def modelFit(self):
-		history = self.model.EVOModel.fit(self.x_train, self.y_train, batch_size=self.PopulationSize, nb_epoch=self.numberOfEpochs, verbose=0, validation_data=(self.x_valid, self.y_valid))
+		earlyStopping = EarlyStopping(monitor='val_loss', patience=30)
+		history = self.model.EVOModel.fit(self.x_train, self.y_train, batch_size=self.PopulationSize, epochs=self.numberOfEpochs, verbose=0, validation_data=(self.x_valid, self.y_valid), callbacks=[earlyStopping])
 		return history
 

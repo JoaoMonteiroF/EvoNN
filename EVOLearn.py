@@ -4,7 +4,7 @@ import scipy.io
 import numpy as np
 
 import models_zoo
-from Optimizer import Optimizer, DEOptimizer, NNEVO 
+from Optimizer import Optimizer, DEOptimizer, SGDOptimizer, NNEVO 
 from Utils import buildAndSaveModels, data_loader
 from models_zoo import MLP_MNIST
 
@@ -17,11 +17,11 @@ def main():
 ############# Create a Keras model and pass it to instantiate an optimizer
 
 	numberOfEpochs = 1000
-	popSize = 250
+	popSize = 256
 
 	model = MLP_MNIST()
 
-	optimizer = DEOptimizer(x_train=x_train, y_train=y_train, x_valid=x_valid, y_valid=y_valid, preDefinedModel=model, n_epochs=numberOfEpochs, popSize = popSize, loss = 'mse')
+	optimizer = DEOptimizer(x_train=x_train, y_train=y_train, x_valid=x_valid, y_valid=y_valid, preDefinedModel=model, n_epochs=numberOfEpochs, popSize = popSize, loss = 'cross_entropy')
 
 	optimizer.modelFit()
 
