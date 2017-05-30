@@ -149,7 +149,7 @@ class DEOptimizer(Optimizer):
 		NGEN = self.numberOfEpochs  
 
 		runMax = 300
-		patience = 100
+		patience = 30
 		epoch=0
 		run=0
 		found = False
