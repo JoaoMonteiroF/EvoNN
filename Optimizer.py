@@ -13,7 +13,7 @@ import array
 import pickle
 import os.path
 
-from Utils import countParameters, calculateLoss, lossFuncException, tensorElementsCount
+from Utils import countParameters, calculateLoss, lossFuncException, tensorElementsCount, buildAndSaveModels
 
 class Optimizer(object):
 
@@ -124,7 +124,7 @@ class DEOptimizer(Optimizer):
 			fitness = self.testModel(ind)
 			if fitness < bestFitness:
 				bestFitness = fitness
-		return fitness
+		return bestFitness
 
 	def modelFit(self):
 
@@ -178,9 +178,9 @@ class DEOptimizer(Optimizer):
 			pop = toolbox.population(n=MU)
 			g=1
 
-		if (os.path.exists('fitness.p') and found):
-			bestTrainFitnessHist=pickle.load(open('train_fitness.p', 'rb'))
-			bestValidFitnessHist=pickle.load(open('valid_fitness.p', 'rb'))
+		if (os.path.exists('train_fitness.p') and os.path.exists('valid_fitness.p') and found):
+			bestTrainFitnessHist = pickle.load(open('train_fitness.p', 'rb'))
+			bestValidFitnessHist = pickle.load(open('valid_fitness.p', 'rb'))
 		else:
 			bestTrainFitnessHist = []
 			bestValidFitnessHist = []
@@ -236,7 +236,8 @@ class DEOptimizer(Optimizer):
 
 			currentBestValidationFitness = self.computeValidationFitness(hof)
 
-			if currentBestValidationFitness < lastBestValidationFitness:
+			if currentBestValidationFitness <= lastBestValidationFitness:
+				lastBestValidationFitness = currentBestValidationFitness
 				iterationsWithoutImprovement = 0
 			else:
 				iterationsWithoutImprovement += 1
