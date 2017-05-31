@@ -22,31 +22,21 @@ class dataSetException(Exception):
 		return repr(self.value)
 
 def buildAndSaveModels(optimizer):
-
-	k = len(optimizer.bestIndividuals)
-
-	results = [0]*k
-
-	index=0
-
+	index = 1
 	for individual in optimizer.bestIndividuals:
 
-		fitness=optimizer.testModel(np.asarray(individual))
-
-		modelResults = [index+1, -1.0*optimizer.model.loss, optimizer.model.delayForMinCorr]
-
-		results[index] = modelResults
-
+		optimizer.model.updateParameters(individual)
 		modelToSave = optimizer.model.EVOModel
-
-		modelToSave.save('$/scratch/nwv-632-aa/Models/bestModel-'+str(index+1)+'-'+dateTime+'.h5')
+		modelToSave.save('$/scratch/nwv-632-aa/Models/bestModel-'+str(index)+'.h5')
 
 		index+=1
 
-	f=open('DEOutputs-'+dateTime+'.txt','w')
-	for output in results:
-		f.write(str(output)+'\n')
-	f.close
+def buildAndSaveModelsFromHof(hallOfFame):
+	index = 1
+	for ind in hallOfFame:
+		updateParameters(ind)
+		model.save('/RQexec/joaobmf/Models/bestModel'+str(index)+'.h5')
+		index+=1
 
 def tensorElementsCount(myTensor):
 

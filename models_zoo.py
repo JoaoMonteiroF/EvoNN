@@ -28,7 +28,6 @@ def MLP_MNIST():
 	model = Sequential()
 	model.add(Flatten(input_shape=(28, 28, 1)))
 	model.add(Dense(128))
-	model.add(Dropout(0.5))
 	model.add(Activation('sigmoid'))
 	model.add(Dense(10))
 	model.add(Activation('softmax'))
