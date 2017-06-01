@@ -122,8 +122,8 @@ class DEOptimizer(Optimizer):
 
 		for ind in hallOfFame:
 			fitness = self.testModel(ind)
-			if fitness < bestFitness:
-				bestFitness = fitness
+			if fitness[0] < bestFitness:
+				bestFitness = fitness[0]
 		return bestFitness
 
 	def modelFit(self):

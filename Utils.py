@@ -131,4 +131,4 @@ def data_loader(dataSetName):
 		print 'The required data set is not avaliable for load. Value passed:', lossFuncException.value	
 
 if __name__ == "__main__":
-	plot_fitness()
+	plot_fitness('valid_fitness.p')
