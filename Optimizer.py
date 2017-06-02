@@ -13,7 +13,7 @@ import array
 import pickle
 import os.path
 
-from Utils import countParameters, calculateLoss, lossFuncException, tensorElementsCount, buildAndSaveModels
+from Utils import countParameters, calculateLoss, lossFuncException, tensorElementsCount, buildAndSaveModels, find_last_improvement
 
 class Optimizer(object):
 
@@ -181,9 +181,13 @@ class DEOptimizer(Optimizer):
 		if (os.path.exists('train_fitness.p') and os.path.exists('valid_fitness.p') and found):
 			bestTrainFitnessHist = pickle.load(open('train_fitness.p', 'rb'))
 			bestValidFitnessHist = pickle.load(open('valid_fitness.p', 'rb'))
+			iterationsWithoutImprovement = find_last_improvement(bestValidFitnessHist)
+			lastBestValidationFitness = bestValidFitnessHist[-1]
 		else:
 			bestTrainFitnessHist = []
 			bestValidFitnessHist = []
+			iterationsWithoutImprovement = 0
+			lastBestValidationFitness = float('inf')
 
 		hof = tools.HallOfFame(10)
 		stats = tools.Statistics(lambda ind: ind.fitness.values)
@@ -208,9 +212,7 @@ class DEOptimizer(Optimizer):
 		logbook.record(gen=0, evals=len(pop), **record)
 		print(logbook.stream)
 
-		iterationsWithoutImprovement = 0
 		currentBestValidationFitness = 0
-		lastBestValidationFitness = float('inf')
 
 		while (g<=NGEN and iterationsWithoutImprovement <= patience):
 			children = []

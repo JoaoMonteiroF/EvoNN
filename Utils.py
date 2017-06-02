@@ -83,6 +83,16 @@ def plot_fitness(pkl = 'fitness.p'):
 	plt.legend('Fitness')	
 	plt.show()
 
+def find_last_improvement(fitness_list):
+	last_fitness = fitness_list[-1]
+
+	for i, value in enumerate(reversed(fitness_list)):
+		if value>last_fitness:
+			print('here')
+			return i
+	return i
+
+
 def data_loader(dataSetName):
 	try:
 		if dataSetName is 'mnist':
@@ -101,7 +111,7 @@ def data_loader(dataSetName):
 			(x_train, y_train), (x_valid, y_valid) = datasets.boston_housing.load_data()
 			return (x_train, y_train), (x_valid, y_valid)
 		else:
-			raise Exception(lossFunction)
+			raise Exception(dataSetName)
 
 		if K.image_data_format() == 'channels_first':
 			x_train = x_train.reshape(x_train.shape[0], 1, img_rows, img_cols)
@@ -127,7 +137,7 @@ def data_loader(dataSetName):
 
 		return (x_train, y_train), (x_valid, y_valid)
 
-	except lossFuncException:
+	except dataSetException:
 		print 'The required data set is not avaliable for load. Value passed:', lossFuncException.value	
 
 if __name__ == "__main__":
