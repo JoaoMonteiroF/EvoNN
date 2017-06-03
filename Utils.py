@@ -27,42 +27,34 @@ def buildAndSaveModels(optimizer):
 
 		optimizer.model.updateParameters(individual)
 		modelToSave = optimizer.model.EVOModel
-		modelToSave.save('$/scratch/nwv-632-aa/Models/bestModel-'+str(index)+'.h5')
+		pickle.dump(modelToSave, open('$/scratch/nwv-632-aa/Models/bestModel-'+str(index)+'.p', 'wb'))
 
 		index+=1
 
-def buildAndSaveModelsFromHof(hallOfFame):
+def buildAndSaveModelsFromHof(hallOfFame, model):
 	index = 1
 	for ind in hallOfFame:
 		updateParameters(ind)
-		model.save('/RQexec/joaobmf/Models/bestModel'+str(index)+'.h5')
+		pickle.dump(model, open('/RQexec/joaobmf/Models/bestModel'+str(index)+'.p', 'wb')
 		index+=1
 
+def countParameters(myModel):
+	counter = 0
+	for param in myModel.parameters():
+		acc =1
+		for value in param.size():
+			acc*=value
+		counter+=acc
+
+	return counter
+
 def tensorElementsCount(myTensor):
+	acc =1
 
-	tensorShape = myTensor.shape
-	accum = 1
+	for value in myTensor.size():
+		acc*=value
 
-	for element in tensorShape:
-		accum *= element
-
-	return accum
-
-def countParameters(model):
-
-	model.summary()
-	totalParameters = 0
-	layersToPrint = model.layers
-	for layer in layersToPrint:
-		paramsList = layer.get_weights()
-
-		for params in paramsList:
-			try:
-				totalParameters += tensorElementsCount(params)
-			except AttributeError:
-				totalParameters += len(params)
-
-	return totalParameters
+	return acc
 
 def calculateLoss(y_true, y_pred, lossFunction):
 	try:
@@ -92,6 +84,18 @@ def find_last_improvement(fitness_list):
 			return i
 	return i
 
+def batch_generator(X, y, batch_size=32):
+	
+	number_of_batches = int(np.ceil(data_size/batch_size))
+	data_size = X.size()[0]
+	
+	while True:
+
+		for i in xrange(0, number_of_batches):
+			inputs_batch = X[i*batch_size:min((i+1)*batch_size, data_size)]
+			targets_batch = y[i*batch_size:min((i+1)*batch_size, data_size)]
+       			
+       			yield (inputs_batch, targets_batch)
 
 def data_loader(dataSetName):
 	try:
@@ -135,7 +139,7 @@ def data_loader(dataSetName):
 		y_train = to_categorical(y_train, num_classes)
 		y_valid = to_categorical(y_valid, num_classes)
 
-		return (x_train, y_train), (x_valid, y_valid)
+		return (torch.from_numpy(x_train), torch.from_numpy(y_train)), (torch.from_numpy(x_valid), torch.from_numpy(y_valid))
 
 	except dataSetException:
 		print 'The required data set is not avaliable for load. Value passed:', lossFuncException.value	

@@ -3,6 +3,8 @@ import scipy.io
 
 import numpy as np
 
+import torch
+
 import models_zoo
 from Optimizer import Optimizer, DEOptimizer, SGDOptimizer, NNEVO 
 from Utils import buildAndSaveModels, data_loader
@@ -20,6 +22,13 @@ def main():
 	popSize = 256
 
 	model = MLP_MNIST()
+
+	if torch.cuda.is_available():
+		model.cuda()
+		x_train.cuda()
+		y_train.cuda()
+		x_valid.cuda()
+		y_valid.cuda()
 
 	optimizer = DEOptimizer(x_train=x_train, y_train=y_train, x_valid=x_valid, y_valid=y_valid, preDefinedModel=model, n_epochs=numberOfEpochs, popSize = popSize, loss = 'cross_entropy')
 	#optimizer = SGDOptimizer(x_train=x_train, y_train=y_train, x_valid=x_valid, y_valid=y_valid, preDefinedModel=model, n_epochs=numberOfEpochs, popSize = popSize, loss = 'cross_entropy')

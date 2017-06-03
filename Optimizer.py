@@ -8,12 +8,17 @@ import numpy as np
 
 from itertools import chain
 
+import torch
+from torch.autograd import Variable
+import torch.optim as optim
+from torchvision import transforms
+
 import random
 import array
 import pickle
 import os.path
 
-from Utils import countParameters, calculateLoss, lossFuncException, tensorElementsCount, buildAndSaveModels, find_last_improvement
+from Utils import countParameters, calculateLoss, lossFuncException, tensorElementsCount, buildAndSaveModels, find_last_improvement, batch_generator
 
 class Optimizer(object):
 
@@ -55,36 +60,23 @@ class NNEVO(object):
 
 	def updateParameters(self, parameters):
 
-		parametersCopy = parameters
+		paramsCopy = torch.from_numpy(paramsToInclude)
 
-		layersList = self.EVOModel.layers
+		for param in self.EVOModel.parameters():
 
-		for layerToUpdate in layersList:
-
-			paramsToUpdate = []
-			paramsList = layerToUpdate.get_weights()
-
-			for params in paramsList:
-
-				try:
-					shapeWeights = params.shape
-					numberOfParameters = tensorElementsCount(params)
-					newParameters = parametersCopy[0:numberOfParameters]
-					newParameters = newParameters.reshape(shapeWeights)
-			
-				except AttributeError:
-					numberOfParameters = len(params)
-					newParameters = parametersCopy[0:numberOfParameters]
-
-				paramsToUpdate.append(newParameters)
-
-				parametersCopy = np.delete(parametersCopy, range(numberOfParameters))
-
-			layerToUpdate.set_weights(paramsToUpdate)
+			numPar = tensorElementsCount(param)
+			parSize = param.size()
+			paramsubset = paramsCopy[0:numPar]
+			param_size = param.size()
+			param.data = paramsubset.view(param_size)
+			try:
+				paramsCopy = paramsCopy[numPar:]
+			except ValueError:
+				break
 
 	def updateOutput(self, inputData, targets):
 			
-		self.output = self.EVOModel.predict(inputData);
+		self.output = self.EVOModel.forward(inputData);
 
 		self.loss = calculateLoss(targets, self.output, lossFunction=self.lossFunction)
 
@@ -263,11 +255,55 @@ class DEOptimizer(Optimizer):
 		return logbook
 
 class SGDOptimizer(Optimizer):
+
+	def __init__:
+		super(SGDOptimizer, self).__init__():
+		self.optim = optim.Adam(model.parameters())
+
+	def train(self):
+		model.train()
+		train_loader = batch_generator(self.x_train, self.y_train, self.PopulationSize)
+		for batch_idx, (data, target) in enumerate(train_loader):
+			if torch.cuda.is_available():
+				data, target = data.cuda(), target.cuda()
+			data, target = Variable(data), Variable(target)
+			optimizer.zero_grad()
+			output = self.model.updateOutput(data, target)
+			loss = self.model.loss
+			loss.backward()
+			self.optim.step()
+			if batch_idx % args.log_interval == 0:
+
+	def test(self):
+		model.eval()
+		test_loss = 0
+		correct = 0
+		test_loader = batch_generator(self.x_valid, self.y_valid, self.PopulationSize)
+		for data, target in test_loader:
+			if args.cuda:
+				data, target = data.cuda(), target.cuda()
+			data, target = Variable(data, volatile=True), Variable(target)
+			output = self.model.updateOutput(data, target)
+			test_loss += self.model.loss
+
+		return test_loss
 	
 	def modelFit(self):
-		earlyStopping = EarlyStopping(monitor='val_loss', patience=30)
-		hist = self.model.EVOModel.fit(self.x_train, self.y_train, batch_size=self.PopulationSize, epochs=self.numberOfEpochs, verbose=0, validation_data=(self.x_valid, self.y_valid), callbacks=[earlyStopping])
-		self.model.EVOModel.save('SGDTrained.h5')
-		pickle.dump(hist.history, open('SGDOptimizer_history.p', 'wb'))
-		return hist
+
+		patience = 30
+		epoch = 1
+		lastBestValidationLoss = float('inf')
+		iterationsWithoutImprovement
+
+		while epoch <= self.numberOfEpochs and iterationsWithoutImprovement < patience:
+			self.train()
+		currentValidationLoss = self.test()
+		
+		if currentValidationLoss<lastBestValidationLoss:
+			iterationsWithoutImprovement = 0
+			lastBestValidationLoss = currentValidationLoss
+		else:
+			iterationsWithoutImprovement+=1
+			
+		pickle.dump(self.model.EVOModel, open('SGDTrained.p', 'wb'))
 
