@@ -22,7 +22,7 @@ from Utils import countParameters, calculateLoss, lossFuncException, tensorEleme
 
 class Optimizer(object):
 
-	def __init__(self, x_train, y_train, x_valid, y_valid, preDefinedModel, n_epochs=100, popSize = 300, loss = 'mse'):
+	def __init__(self, x_train, y_train, x_valid, y_valid, preDefinedModel, n_epochs=100, popSize = 300, loss_function = 'mse'):
 
 		self.numberOfEpochs = n_epochs
 		self.PopulationSize = popSize
@@ -30,39 +30,27 @@ class Optimizer(object):
 		self.y_train = y_train
 		self.x_valid = x_valid
 		self.y_valid = y_valid
-		self.loss = loss
+		self.loss_function = loss_function
 
-		self.model = NNEVO(preModel = preDefinedModel, lossFunction = loss)
+		self.model = preDefinedModel
 
 		self.totalNumberOfParameters = countParameters(preDefinedModel)
 
-		#self.y_valid = np.array(valid_set[1], dtype=theano.config.floatX)
+	def Evaluate(self, individual):
 
-	def EVOEvaluate(self, individual):
-
-		self.model.updateParameters(np.asarray(individual))
-		return self.model.updateOutput(inputData=self.x_train, targets=self.y_train)
+		self.updateParameters(np.asarray(individual))
+		return self.updateOutput(inputData=self.x_train, targets=self.y_train)
 
 	def testModel(self, individual):
 
-		self.model.updateParameters(np.asarray(individual))
-		return self.model.updateOutput(inputData=self.x_valid, targets=self.y_valid)
-
-	def modelFit(self):
-		raise NotImplementedError('Optimizers must override modelFit()')
-
-class NNEVO(object):
-
-	def __init__(self, preModel, lossFunction):
-
-		self.EVOModel = preModel
-		self.lossFunction = lossFunction
+		self.updateParameters(np.asarray(individual))
+		return self.updateOutput(inputData=self.x_valid, targets=self.y_valid)
 
 	def updateParameters(self, parameters):
 
-		paramsCopy = torch.from_numpy(paramsToInclude)
+		paramsCopy = torch.from_numpy(parameters)
 
-		for param in self.EVOModel.parameters():
+		for param in self.model.parameters():
 
 			numPar = tensorElementsCount(param)
 			parSize = param.size()
@@ -75,12 +63,25 @@ class NNEVO(object):
 				break
 
 	def updateOutput(self, inputData, targets):
+		self.model.eval()
+		total_loss = 0
+		data_loader = batch_generator(inputData, targets)
+		for data, target in data_loader:
+			if torch.cuda.is_available():
+				data, target = data.cuda(), target.cuda()
+			data, target = Variable(data, volatile=True), Variable(target)
+			output = self.model.forward(data)
+			loss = calculateLoss(output, target, lossFunction=self.loss_function)
+			total_loss += loss.data[0]*data.size()[0]
 			
-		self.output = self.EVOModel.forward(inputData);
+		self.output = output
 
-		self.loss = calculateLoss(targets, self.output, lossFunction=self.lossFunction)
+		self.loss = total_loss/inputData.size()[0]
 
-		return [self.loss,];
+		return [self.loss,]
+
+	def modelFit(self):
+		raise NotImplementedError('Optimizers must override modelFit()')
 
 class DEOptimizer(Optimizer):
 
@@ -135,7 +136,7 @@ class DEOptimizer(Optimizer):
 		toolbox.register("mutate", self.mutDE, f=0.8)
 		toolbox.register("mate", self.cxExponential, cr=0.8)
 		toolbox.register("select", tools.selRandom, k=3)
-		toolbox.register("evaluate", self.EVOEvaluate)
+		toolbox.register("evaluate", self.Evaluate)
 
 		MU = self.PopulationSize
 		NGEN = self.numberOfEpochs  
@@ -256,54 +257,61 @@ class DEOptimizer(Optimizer):
 
 class SGDOptimizer(Optimizer):
 
-	def __init__:
-		super(SGDOptimizer, self).__init__():
-		self.optim = optim.Adam(model.parameters())
-
-	def train(self):
-		model.train()
+	def train(self, epoch):
+		self.model.train()
 		train_loader = batch_generator(self.x_train, self.y_train, self.PopulationSize)
 		for batch_idx, (data, target) in enumerate(train_loader):
 			if torch.cuda.is_available():
 				data, target = data.cuda(), target.cuda()
 			data, target = Variable(data), Variable(target)
-			optimizer.zero_grad()
-			output = self.model.updateOutput(data, target)
-			loss = self.model.loss
+			self.optim.zero_grad()
+			output = self.model.forward(data)
+			loss = calculateLoss(output, target, lossFunction=self.loss_function)
 			loss.backward()
 			self.optim.step()
-			if batch_idx % args.log_interval == 0:
+			if batch_idx % 10 == 0:
+				print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(epoch, batch_idx * len(data), self.x_train.size()[0], 100. * batch_idx * len(data) / self.x_train.size()[0], loss.data[0]))
 
 	def test(self):
-		model.eval()
+		self.model.eval()
 		test_loss = 0
-		correct = 0
 		test_loader = batch_generator(self.x_valid, self.y_valid, self.PopulationSize)
 		for data, target in test_loader:
-			if args.cuda:
+			if torch.cuda.is_available():
 				data, target = data.cuda(), target.cuda()
 			data, target = Variable(data, volatile=True), Variable(target)
-			output = self.model.updateOutput(data, target)
-			test_loss += self.model.loss
+			output = self.model.forward(data)
+			loss = calculateLoss(output, target, lossFunction=self.loss_function)
+			test_loss += loss.data[0]*data.size()[0]
 
+		test_loss/=self.x_valid.size()[0]
+		print('Test Loss: {}'.format(test_loss))
 		return test_loss
+
+	def test__(self):
+		self.updateParameters(np.random.random(self.totalNumberOfParameters))
+		loss = self.updateOutput(self.x_valid, self.y_valid)
+		print('Test Loss: {}'.format(loss[0]))
+		return loss[0]
 	
 	def modelFit(self):
 
+		self.optim = optim.Adam(self.model.parameters())
 		patience = 30
 		epoch = 1
 		lastBestValidationLoss = float('inf')
-		iterationsWithoutImprovement
+		iterationsWithoutImprovement = 0
 
-		while epoch <= self.numberOfEpochs and iterationsWithoutImprovement < patience:
-			self.train()
-		currentValidationLoss = self.test()
+		while ((epoch <= self.numberOfEpochs) and (iterationsWithoutImprovement < patience)):
+			self.train(epoch)
+			epoch+=1
+			currentValidationLoss = self.test__()
 		
-		if currentValidationLoss<lastBestValidationLoss:
-			iterationsWithoutImprovement = 0
-			lastBestValidationLoss = currentValidationLoss
-		else:
-			iterationsWithoutImprovement+=1
+			if currentValidationLoss<lastBestValidationLoss:
+				iterationsWithoutImprovement = 0
+				lastBestValidationLoss = currentValidationLoss
+			else:
+				iterationsWithoutImprovement+=1
 			
 		pickle.dump(self.model.EVOModel, open('SGDTrained.p', 'wb'))
 

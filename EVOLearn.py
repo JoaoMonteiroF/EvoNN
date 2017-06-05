@@ -6,9 +6,9 @@ import numpy as np
 import torch
 
 import models_zoo
-from Optimizer import Optimizer, DEOptimizer, SGDOptimizer, NNEVO 
+from Optimizer import Optimizer, DEOptimizer, SGDOptimizer 
 from Utils import buildAndSaveModels, data_loader
-from models_zoo import MLP_MNIST
+from models_zoo import MLP_MNIST, CNN
 
 ############# Import data set
 
@@ -22,16 +22,13 @@ def main():
 	popSize = 256
 
 	model = MLP_MNIST()
+	#model = CNN()
 
 	if torch.cuda.is_available():
 		model.cuda()
-		x_train.cuda()
-		y_train.cuda()
-		x_valid.cuda()
-		y_valid.cuda()
 
-	optimizer = DEOptimizer(x_train=x_train, y_train=y_train, x_valid=x_valid, y_valid=y_valid, preDefinedModel=model, n_epochs=numberOfEpochs, popSize = popSize, loss = 'cross_entropy')
-	#optimizer = SGDOptimizer(x_train=x_train, y_train=y_train, x_valid=x_valid, y_valid=y_valid, preDefinedModel=model, n_epochs=numberOfEpochs, popSize = popSize, loss = 'cross_entropy')
+	#optimizer = DEOptimizer(x_train=x_train, y_train=y_train, x_valid=x_valid, y_valid=y_valid, preDefinedModel=model, n_epochs=numberOfEpochs, popSize = popSize, loss_function = 'cross_entropy')
+	optimizer = SGDOptimizer(x_train=x_train, y_train=y_train, x_valid=x_valid, y_valid=y_valid, preDefinedModel=model, n_epochs=numberOfEpochs, popSize = popSize, loss_function = 'cross_entropy')
 
 	optimizer.modelFit()
 

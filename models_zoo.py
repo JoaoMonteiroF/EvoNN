@@ -7,7 +7,7 @@ import torch.optim as optim
 
 class CNN(nn.Module):
 	def __init__(self):
-		super(Net, self).__init__()
+		super(CNN, self).__init__()
 		self.conv1 = nn.Conv2d(1, 10, kernel_size=5)
 		self.conv2 = nn.Conv2d(10, 20, kernel_size=5)
 		self.conv2_drop = nn.Dropout2d()
@@ -23,7 +23,6 @@ class CNN(nn.Module):
 		x = self.fc2(x)
 		return F.softmax(x)
 
-
 class MLP_MNIST(nn.Module):
 	def __init__(self):
 		super(MLP_MNIST, self).__init__()
@@ -31,7 +30,7 @@ class MLP_MNIST(nn.Module):
 		self.den2 = nn.Linear(128, 10)
 
 	def forward(self, x):
-		x = x.view(x.numel())
+		x = x.view(-1, 784)
 		x = self.den1(x)
 		x = F.dropout(x)
 		x = F.relu(x)
@@ -53,7 +52,7 @@ def CNN_MNIST():
 		x = F.max_pool2d(x, 2)
 		x = F.dropout(x)
 		x = F.relu(x)
-		x = x.view(x.numel())
+		x = x.view(-1, 9216*128)
 		x = self.den1(x)
 		x = F.dropout(x)
 		x = F.relu(x)
