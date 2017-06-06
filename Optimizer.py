@@ -41,7 +41,7 @@ class Optimizer(object):
 
 	def testModel(self, individual):
 
-		self.updateParameters(np.asarray(individual))
+		self.updateParameters(np.asarray(individual, dtype='float32'))
 		return self.updateOutput(inputData=self.x_valid, targets=self.y_valid)
 
 	def updateParameters(self, parameters):
@@ -303,7 +303,7 @@ class SGDOptimizer(Optimizer):
 		while ((epoch <= self.numberOfEpochs) and (iterationsWithoutImprovement < patience)):
 			self.train(epoch)
 			epoch+=1
-			currentValidationLoss = self.test__()
+			currentValidationLoss = self.test()
 		
 			if currentValidationLoss<lastBestValidationLoss:
 				iterationsWithoutImprovement = 0
@@ -311,5 +311,5 @@ class SGDOptimizer(Optimizer):
 			else:
 				iterationsWithoutImprovement+=1
 			
-		pickle.dump(self.model.EVOModel, open('SGDTrained.p', 'wb'))
+		pickle.dump(self.model, open('SGDTrained.p', 'wb'))
 

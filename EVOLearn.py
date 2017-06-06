@@ -27,8 +27,8 @@ def main():
 	if torch.cuda.is_available():
 		model.cuda()
 
-	#optimizer = DEOptimizer(x_train=x_train, y_train=y_train, x_valid=x_valid, y_valid=y_valid, preDefinedModel=model, n_epochs=numberOfEpochs, popSize = popSize, loss_function = 'cross_entropy')
-	optimizer = SGDOptimizer(x_train=x_train, y_train=y_train, x_valid=x_valid, y_valid=y_valid, preDefinedModel=model, n_epochs=numberOfEpochs, popSize = popSize, loss_function = 'cross_entropy')
+	optimizer = DEOptimizer(x_train=x_train, y_train=y_train, x_valid=x_valid, y_valid=y_valid, preDefinedModel=model, n_epochs=numberOfEpochs, popSize = popSize, loss_function = 'cross_entropy')
+	#optimizer = SGDOptimizer(x_train=x_train, y_train=y_train, x_valid=x_valid, y_valid=y_valid, preDefinedModel=model, n_epochs=numberOfEpochs, popSize = popSize, loss_function = 'cross_entropy')
 
 	optimizer.modelFit()
 
