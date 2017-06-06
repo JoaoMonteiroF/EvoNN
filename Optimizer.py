@@ -2,8 +2,6 @@ from deap import base
 from deap import creator
 from deap import tools
 
-from keras.callbacks import EarlyStopping
-
 import numpy as np
 
 from itertools import chain
