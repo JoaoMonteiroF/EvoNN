@@ -38,7 +38,7 @@ class Optimizer(object):
 
 	def Evaluate(self, individual):
 
-		self.updateParameters(np.asarray(individual))
+		self.updateParameters(np.asarray(individual, dtype='float32'))
 		return self.updateOutput(inputData=self.x_train, targets=self.y_train)
 
 	def testModel(self, individual):
