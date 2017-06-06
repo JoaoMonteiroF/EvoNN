@@ -49,7 +49,6 @@ class Optimizer(object):
 		paramsCopy = torch.from_numpy(parameters)
 
 		for param in self.model.parameters():
-
 			numPar = tensorElementsCount(param)
 			parSize = param.size()
 			paramsubset = paramsCopy[0:numPar]
@@ -59,6 +58,7 @@ class Optimizer(object):
 				paramsCopy = paramsCopy[numPar:]
 			except ValueError:
 				break
+		self.model.cuda()
 
 	def updateOutput(self, inputData, targets):
 		self.model.eval()
