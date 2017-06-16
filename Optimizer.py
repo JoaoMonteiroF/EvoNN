@@ -3,6 +3,7 @@ from deap import creator
 from deap import tools
 
 import numpy as np
+import cupy as cp
 
 from itertools import chain
 
@@ -36,24 +37,24 @@ class Optimizer(object):
 
 	def Evaluate(self, individual):
 
-		self.updateParameters(np.asarray(individual, dtype='float32'))
+		self.updateParameters(individual)
 		return self.updateOutput(inputData=self.x_train, targets=self.y_train)
 
 	def testModel(self, individual):
 
-		self.updateParameters(np.asarray(individual, dtype='float32'))
+		self.updateParameters(individual)
 		return self.updateOutput(inputData=self.x_valid, targets=self.y_valid)
 
 	def updateParameters(self, parameters):
 
-		paramsCopy = torch.from_numpy(parameters)
+		paramsCopy = parameters
 
 		for param in self.model.parameters():
 			numPar = tensorElementsCount(param)
 			parSize = param.size()
 			paramsubset = paramsCopy[0:numPar]
 			param_size = param.size()
-			param.data = paramsubset.view(param_size)
+			param.data = torch.from_numpy(cp.asnumpy(paramsubset.reshape(param_size)))
 			try:
 				paramsCopy = paramsCopy[numPar:]
 			except ValueError:
@@ -76,7 +77,7 @@ class Optimizer(object):
 
 		self.loss = total_loss/inputData.size()[0]
 
-		return [self.loss,]
+		return self.loss
 
 	def modelFit(self):
 		raise NotImplementedError('Optimizers must override modelFit()')
@@ -313,3 +314,88 @@ class SGDOptimizer(Optimizer):
 			
 		pickle.dump(self.model, open('SGDTrained.p', 'wb'))
 
+class NewDe(Optimizer):
+
+	def __init__(self, x_train, y_train, x_valid, y_valid, preDefinedModel, n_epochs=100, popSize = 300, loss_function = 'mse', cr=0.8, f=0.8, ub=10., lb=-10.):
+		super(NewDe, self).__init__(x_train, y_train, x_valid, y_valid, preDefinedModel, n_epochs, popSize, loss_function)
+		self.bounding = cp.ElementwiseKernel('float32 x, float32 max, float32 min',
+						'float32 z',
+						'''
+						if(x>max){
+							z=max;} else if(x<min) {
+							z=min;} else {
+							z=x;}
+						''',
+						'bounding')
+
+		self.mutate = cp.ElementwiseKernel('float32 a, float32 b, float32 c, float32 f', 'float32 z', 'z=a+f*(b-c);', 'mutate')
+
+		self.crossInd = cp.ElementwiseKernel('float32 orig, float32 mut, float32 random, float32 cr',
+						'float32 z',
+						'''
+						if(random > cr){
+							z = orig;} else {
+							z = mut;}
+						''',
+						'crossInd')
+
+		self.select = cp.ElementwiseKernel('float32 orig, float32 cand, float32 origFit, float32 candFit', 'float32 newpop', '(candFit<origFit) ? newpop = cand : newpop = orig ', 'select')
+
+		self.cr = cr
+		self.f = f
+		self.upperBound = ub
+		self.lowerBound = lb
+		self.pop = self.initialization(self.PopulationSize, self.totalNumberOfParameters, self.upperBound, self.lowerBound)
+		self.candPop = cp.empty_like(self.pop)
+		self.fitnesses = cp.ones(self.PopulationSize)*float('inf')
+		self.candFit = cp.ones(self.PopulationSize)*float('inf')
+
+	def mutation(self):
+		c1 = np.random.permutation(self.PopulationSize)
+		c2 = np.random.permutation(self.PopulationSize)
+		c3 = np.random.permutation(self.PopulationSize)
+
+		popa = cp.empty_like(self.pop)
+		popb = cp.empty_like(self.pop)
+		popc = cp.empty_like(self.pop)
+
+		popa = self.pop[c1,:]
+		popb = self.pop[c2,:]
+		popc = self.pop[c3,:]
+
+		self.mutate(popa, popb, popc, self.candPop)
+
+	def cxBinomial(self):
+		crTrials = cp.random.random(self.pop.shape, dtype='float32')
+		candpop_ = cp.empty_like(self.pop)
+		self.crossInd(self.pop, self.candPop, crTrials, self.cr, candpop_)
+		self.candPop = candpop_
+
+	def popEvaluate(self):
+		for i in range(self.PopulationSize):
+			self.candFit[i] = self.Evaluate(self.candPop[i,:])
+
+	def selection(self):
+		for i in range(self.PopulationSize):
+			if self.candFit[i] < self.fitnesses[i]:
+				self.fitnesses[i] = self.candFit[i]
+				self.candPop[i,:] = self.pop[i,:]
+
+	def initialization(self, popSize, popDim, upperBound, lowerBound):
+		population = cp.random.random(size=(popSize, popDim), dtype='float32')*(upperBound-lowerBound)+lowerBound
+		return population
+
+	def modelFit(self):
+		g=0
+		while (g<=self.numberOfEpochs):
+			print('Start of generation {}'.format(g))
+			print('mutation')
+			self.mutation()
+			print('crossover')
+			self.cxBinomial()
+			print('evaluation')
+			self.popEvaluate()
+			print('selection')
+			self.selection()
+			print('End of generation {}'.format(g))
+			g+=1

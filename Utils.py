@@ -68,7 +68,7 @@ def calculateLoss(y_pred, y_true, lossFunction):
 		else:
 			raise Exception(lossFunction)
 	except lossFuncException:
-		print 'Wrong loss function definition. Value passed:', lossFuncException.value
+		print('Wrong loss function definition. Value passed: {}'.fotmat(lossFuncException.value))
 
 def plot_fitness(pkl = 'fitness.p'):
 	to_plot = pickle.load(file(pkl))
@@ -90,7 +90,7 @@ def batch_generator(X, y, batch_size=32):
 	data_size = X.size()[0]
 	number_of_batches = int(np.ceil(data_size/batch_size))
 
-	for i in xrange(0, number_of_batches):
+	for i in range(0, number_of_batches):
 		inputs_batch = X[i*batch_size:min((i+1)*batch_size, data_size)]
 		targets_batch = y[i*batch_size:min((i+1)*batch_size, data_size)]
 		
@@ -132,7 +132,7 @@ def data_loader(dataSetName):
 		return (torch.from_numpy(x_train), torch.from_numpy(y_train)), (torch.from_numpy(x_valid), torch.from_numpy(y_valid))
 
 	except dataSetException:
-		print 'The required data set is not avaliable for load. Value passed:', lossFuncException.value	
+		print('The required data set is not avaliable for load. Value passed: {}'.format(lossFuncException.value))	
 
 if __name__ == "__main__":
 	plot_fitness('valid_fitness.p')
