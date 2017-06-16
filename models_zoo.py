@@ -1,49 +1,62 @@
-from keras.models import Sequential, load_model, Model
-from keras.layers import Dense, Dropout, Activation, Flatten, Reshape, Input
-from keras.layers.convolutional import Conv2D, Conv2DTranspose, UpSampling2D, ZeroPadding2D
-from keras.layers.pooling import MaxPooling2D
-from keras.layers.normalization import BatchNormalization
-from keras.layers.noise import GaussianNoise
-from keras import layers
-from keras import models
-from keras.layers.advanced_activations import LeakyReLU
-from keras.utils import np_utils
-from keras.callbacks import EarlyStopping, ModelCheckpoint
+from __future__ import print_function
+import numpy as np
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
 
+class CNN(nn.Module):
+	def __init__(self):
+		super(CNN, self).__init__()
+		self.conv1 = nn.Conv2d(1, 10, kernel_size=5)
+		self.conv2 = nn.Conv2d(10, 20, kernel_size=5)
+		self.conv2_drop = nn.Dropout2d()
+		self.fc1 = nn.Linear(320, 50)
+		self.fc2 = nn.Linear(50, 10)
 
-def MLP():
-	model = Sequential()
-	model.add(Dense(64, init='uniform', input_shape=1978))
-	model.add(Dropout(0.2))
-	model.add(Activation('relu'))
-	model.add(Dense(32, init="uniform"))
-	model.add(Dropout(0.2))
-	model.add(Activation('relu'))
-	model.add(Dense(21, init="uniform"))
-	model.add(Activation('sigmoid'))
-	model.compile(loss='mean_squared_error', optimizer='sgd')
-	return model
+	def forward(self, x):
+		x = F.relu(F.max_pool2d(self.conv1(x), 2))
+		x = F.relu(F.max_pool2d(self.conv2_drop(self.conv2(x)), 2))
+		x = x.view(-1, 320)
+		x = F.relu(self.fc1(x))
+		x = F.dropout(x, training=self.training)
+		x = self.fc2(x)
+		return F.softmax(x)
 
-def MLP_MNIST():
-	model = Sequential()
-	model.add(Flatten(input_shape=(28, 28, 1)))
-	model.add(Dense(128))
-	model.add(Dropout(0.5))
-	model.add(Activation('sigmoid'))
-	model.add(Dense(10))
-	model.add(Activation('softmax'))
-	model.compile(loss='categorical_crossentropy', optimizer='adam')
-	return model
+class MLP_MNIST(nn.Module):
+	def __init__(self):
+		super(MLP_MNIST, self).__init__()
+		self.den1 = nn.Linear(784, 128)
+		self.den2 = nn.Linear(128, 10)
+
+	def forward(self, x):
+		x = x.view(-1, 784)
+		x = self.den1(x)
+		x = F.dropout(x)
+		x = F.relu(x)
+		x = self.den2(x)
+		return F.softmax(x)
 
 def CNN_MNIST():
-	model = Sequential()
-	model.add(Conv2D(32, kernel_size=(3, 3), activation='relu', input_shape=(28,28,1)))
-	model.add(Conv2D(64, kernel_size=(3, 3), activation='relu'))
-	model.add(MaxPooling2D(pool_size=(2, 2)))
-	model.add(Dropout(0.25))
-	model.add(Flatten())
-	model.add(Dense(128, activation='relu'))
-	model.add(Dropout(0.5))
-	model.add(Dense(10, activation='softmax'))
-	model.compile(loss='categorical_crossentropy', optimizer='adam')
-	return model
+	def __init__(self):
+		super(CNN_MNIST, self).__init__()
+		self.conv1 = nn.Conv2d(1, 32, 3)
+		self.conv2 = nn.Conv2d(32, 64, 3)
+		self.den1 = nn.Linear(9216, 128)
+		self.den2 = nn.Linear(128, 10)
+
+	def forward(self, x):
+		x = self.conv1(x)
+		x = F.relu(x)
+		x = self.conv2(x)
+		x = F.max_pool2d(x, 2)
+		x = F.dropout(x)
+		x = F.relu(x)
+		x = x.view(-1, 9216*128)
+		x = self.den1(x)
+		x = F.dropout(x)
+		x = F.relu(x)
+		x = self.den2(x)
+		x = F.relu(x)
+		return F.softmax(x)
+

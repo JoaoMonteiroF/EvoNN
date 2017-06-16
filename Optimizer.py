@@ -2,22 +2,25 @@ from deap import base
 from deap import creator
 from deap import tools
 
-from keras.callbacks import EarlyStopping
-
 import numpy as np
 
 from itertools import chain
+
+import torch
+from torch.autograd import Variable
+import torch.optim as optim
+from torchvision import transforms
 
 import random
 import array
 import pickle
 import os.path
 
-from Utils import countParameters, calculateLoss, lossFuncException, tensorElementsCount, buildAndSaveModels, find_last_improvement
+from Utils import countParameters, calculateLoss, lossFuncException, tensorElementsCount, buildAndSaveModels, find_last_improvement, batch_generator
 
 class Optimizer(object):
 
-	def __init__(self, x_train, y_train, x_valid, y_valid, preDefinedModel, n_epochs=100, popSize = 300, loss = 'mse'):
+	def __init__(self, x_train, y_train, x_valid, y_valid, preDefinedModel, n_epochs=100, popSize = 300, loss_function = 'mse'):
 
 		self.numberOfEpochs = n_epochs
 		self.PopulationSize = popSize
@@ -25,70 +28,58 @@ class Optimizer(object):
 		self.y_train = y_train
 		self.x_valid = x_valid
 		self.y_valid = y_valid
-		self.loss = loss
+		self.loss_function = loss_function
 
-		self.model = NNEVO(preModel = preDefinedModel, lossFunction = loss)
+		self.model = preDefinedModel
 
 		self.totalNumberOfParameters = countParameters(preDefinedModel)
 
-		#self.y_valid = np.array(valid_set[1], dtype=theano.config.floatX)
+	def Evaluate(self, individual):
 
-	def EVOEvaluate(self, individual):
-
-		self.model.updateParameters(np.asarray(individual))
-		return self.model.updateOutput(inputData=self.x_train, targets=self.y_train)
+		self.updateParameters(np.asarray(individual, dtype='float32'))
+		return self.updateOutput(inputData=self.x_train, targets=self.y_train)
 
 	def testModel(self, individual):
 
-		self.model.updateParameters(np.asarray(individual))
-		return self.model.updateOutput(inputData=self.x_valid, targets=self.y_valid)
-
-	def modelFit(self):
-		raise NotImplementedError('Optimizers must override modelFit()')
-
-class NNEVO(object):
-
-	def __init__(self, preModel, lossFunction):
-
-		self.EVOModel = preModel
-		self.lossFunction = lossFunction
+		self.updateParameters(np.asarray(individual, dtype='float32'))
+		return self.updateOutput(inputData=self.x_valid, targets=self.y_valid)
 
 	def updateParameters(self, parameters):
 
-		parametersCopy = parameters
+		paramsCopy = torch.from_numpy(parameters)
 
-		layersList = self.EVOModel.layers
-
-		for layerToUpdate in layersList:
-
-			paramsToUpdate = []
-			paramsList = layerToUpdate.get_weights()
-
-			for params in paramsList:
-
-				try:
-					shapeWeights = params.shape
-					numberOfParameters = tensorElementsCount(params)
-					newParameters = parametersCopy[0:numberOfParameters]
-					newParameters = newParameters.reshape(shapeWeights)
-			
-				except AttributeError:
-					numberOfParameters = len(params)
-					newParameters = parametersCopy[0:numberOfParameters]
-
-				paramsToUpdate.append(newParameters)
-
-				parametersCopy = np.delete(parametersCopy, range(numberOfParameters))
-
-			layerToUpdate.set_weights(paramsToUpdate)
+		for param in self.model.parameters():
+			numPar = tensorElementsCount(param)
+			parSize = param.size()
+			paramsubset = paramsCopy[0:numPar]
+			param_size = param.size()
+			param.data = paramsubset.view(param_size)
+			try:
+				paramsCopy = paramsCopy[numPar:]
+			except ValueError:
+				break
+		self.model.cuda()
 
 	def updateOutput(self, inputData, targets):
+		self.model.eval()
+		total_loss = 0
+		data_loader = batch_generator(inputData, targets)
+		for data, target in data_loader:
+			if torch.cuda.is_available():
+				data, target = data.cuda(), target.cuda()
+			data, target = Variable(data, volatile=True), Variable(target)
+			output = self.model.forward(data)
+			loss = calculateLoss(output, target, lossFunction=self.loss_function)
+			total_loss += loss.data[0]*data.size()[0]
 			
-		self.output = self.EVOModel.predict(inputData);
+		self.output = output
 
-		self.loss = calculateLoss(targets, self.output, lossFunction=self.lossFunction)
+		self.loss = total_loss/inputData.size()[0]
 
-		return [self.loss,];
+		return [self.loss,]
+
+	def modelFit(self):
+		raise NotImplementedError('Optimizers must override modelFit()')
 
 class DEOptimizer(Optimizer):
 
@@ -143,7 +134,7 @@ class DEOptimizer(Optimizer):
 		toolbox.register("mutate", self.mutDE, f=0.8)
 		toolbox.register("mate", self.cxExponential, cr=0.8)
 		toolbox.register("select", tools.selRandom, k=3)
-		toolbox.register("evaluate", self.EVOEvaluate)
+		toolbox.register("evaluate", self.Evaluate)
 
 		MU = self.PopulationSize
 		NGEN = self.numberOfEpochs  
@@ -263,11 +254,62 @@ class DEOptimizer(Optimizer):
 		return logbook
 
 class SGDOptimizer(Optimizer):
+
+	def train(self, epoch):
+		self.model.train()
+		train_loader = batch_generator(self.x_train, self.y_train, self.PopulationSize)
+		for batch_idx, (data, target) in enumerate(train_loader):
+			if torch.cuda.is_available():
+				data, target = data.cuda(), target.cuda()
+			data, target = Variable(data), Variable(target)
+			self.optim.zero_grad()
+			output = self.model.forward(data)
+			loss = calculateLoss(output, target, lossFunction=self.loss_function)
+			loss.backward()
+			self.optim.step()
+			if batch_idx % 10 == 0:
+				print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(epoch, batch_idx * len(data), self.x_train.size()[0], 100. * batch_idx * len(data) / self.x_train.size()[0], loss.data[0]))
+
+	def test(self):
+		self.model.eval()
+		test_loss = 0
+		test_loader = batch_generator(self.x_valid, self.y_valid, self.PopulationSize)
+		for data, target in test_loader:
+			if torch.cuda.is_available():
+				data, target = data.cuda(), target.cuda()
+			data, target = Variable(data, volatile=True), Variable(target)
+			output = self.model.forward(data)
+			loss = calculateLoss(output, target, lossFunction=self.loss_function)
+			test_loss += loss.data[0]*data.size()[0]
+
+		test_loss/=self.x_valid.size()[0]
+		print('Test Loss: {}'.format(test_loss))
+		return test_loss
+
+	def test__(self):
+		self.updateParameters(np.random.random(self.totalNumberOfParameters))
+		loss = self.updateOutput(self.x_valid, self.y_valid)
+		print('Test Loss: {}'.format(loss[0]))
+		return loss[0]
 	
 	def modelFit(self):
-		earlyStopping = EarlyStopping(monitor='val_loss', patience=30)
-		hist = self.model.EVOModel.fit(self.x_train, self.y_train, batch_size=self.PopulationSize, epochs=self.numberOfEpochs, verbose=0, validation_data=(self.x_valid, self.y_valid), callbacks=[earlyStopping])
-		self.model.EVOModel.save('SGDTrained.h5')
-		pickle.dump(hist.history, open('SGDOptimizer_history.p', 'wb'))
-		return hist
+
+		self.optim = optim.Adam(self.model.parameters())
+		patience = 30
+		epoch = 1
+		lastBestValidationLoss = float('inf')
+		iterationsWithoutImprovement = 0
+
+		while ((epoch <= self.numberOfEpochs) and (iterationsWithoutImprovement < patience)):
+			self.train(epoch)
+			epoch+=1
+			currentValidationLoss = self.test()
+		
+			if currentValidationLoss<lastBestValidationLoss:
+				iterationsWithoutImprovement = 0
+				lastBestValidationLoss = currentValidationLoss
+			else:
+				iterationsWithoutImprovement+=1
+			
+		pickle.dump(self.model, open('SGDTrained.p', 'wb'))
 
